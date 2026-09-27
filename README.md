@@ -18,41 +18,23 @@ DB는 어떤 환경이든 외부 Postgres(Neon, Supabase, Cloud SQL 등)를 사�
 
 ## 1. 클라우드 배포 (Vercel + Neon)
 
-### 1-1. DB 만들기 (Neon, 무료 플랜 가능)
-1. https://neon.tech 에서 프로젝트 생성 (Region: 한국과 가장 가까운 아시아 리전 선택. Vercel 함수는 `vercel.json`에서 서울 `icn1`로 고정됨)
-2. Connection string 두 개를 복사
-   - **Pooled** (호스트에 `-pooler` 포함) → `DATABASE_URL` 뒤에 `?sslmode=require&pgbouncer=true&connect_timeout=15`
-   - **Direct** → `DIRECT_URL` 뒤에 `?sslmode=require`
+👉 **단계별 체크리스트: [`DEPLOY.md`](DEPLOY.md)** (키 발급 → DB → main 병합 → Vercel → 배포 후 점검 → 문제 해결)
 
-> Vercel 대시보드의 Storage → Neon 연동을 써도 됩니다. 그 경우 생성된 변수명(`DATABASE_URL`, `DATABASE_URL_UNPOOLED`)을 위 두 이름으로 맞춰주세요.
+요약:
+1. Anthropic 키, 네이버 검색 API 키, Neon Postgres 주소 2개(pooled / direct) 준비
+2. `main`에 병합 (GitHub Actions `ci`가 타입검사·테스트·마이그레이션·빌드를 자동 검증)
+3. Vercel에서 저장소 Import → 환경변수 붙여넣기 → Deploy (빌드 시 DB 테이블 자동 생성)
+4. `/api/health` → `/api/health?deep=1` → 실제 검색 순서로 확인
 
-### 1-2. Vercel 프로젝트
-1. https://vercel.com/new → 이 GitHub 저장소 Import (Framework: Next.js 자동 인식)
-2. **Environment Variables** 등록
-
-| 이름 | 필수 | 비고 |
+| 환경변수 | 필수 | 비고 |
 |---|---|---|
-| `DATABASE_URL` | ✅ | Neon pooled URL |
+| `DATABASE_URL` | ✅ | Neon pooled URL + `&pgbouncer=true&connect_timeout=15` |
 | `DIRECT_URL` | ✅ | Neon direct URL (마이그레이션용) |
 | `ANTHROPIC_API_KEY` | ✅ | |
-| `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | ✅ | developers.naver.com → 검색 API |
-| `COUPANG_ACCESS_KEY` / `COUPANG_SECRET_KEY` | | 승인 후. 없으면 해당 소스만 건너뜀 |
-| `ALIEXPRESS_APP_KEY` / `ALIEXPRESS_APP_SECRET` / `ALIEXPRESS_TRACKING_ID` | | 승인 후 |
+| `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | ✅ | 사용 API에 `검색` 포함 |
+| `APP_PASSWORD` | 권장 | 설정 시 사이트 전체에 비밀번호 (LLM 비용 남용 방지) |
+| `COUPANG_*`, `ALIEXPRESS_*` | | 승인 후. 없으면 해당 소스만 건너뜀 |
 | `NORMALIZE_MODEL` / `GROUPING_MODEL` | | 모델 교체 시에만 |
-
-3. Deploy. 빌드 시 `vercel-build` 스크립트가 `prisma migrate deploy`로 테이블을 자동 생성합니다.
-   - DB에 연결할 수 없으면 빌드가 **실패**합니다 (P1001 에러). 이때는 `DATABASE_URL`, `DIRECT_URL` 값을 확인하세요.
-   - Preview 배포도 같은 DB에 마이그레이션을 실행합니다. 운영 DB와 분리하려면 Vercel 환경변수에서 Preview용 DB URL을 따로 지정하세요.
-4. 확인: `https://<배포주소>/api/health` → `{"ok":true,"db":"ok",...}`
-   - `ok:false`면 `env`에서 `false`인 항목, 또는 `db` 에러 메시지를 확인하세요.
-
-### 1-3. 네이버 API 설정 주의
-네이버 개발자센터 애플리케이션의 **서비스 환경 → WEB 설정**에 Vercel 도메인(`https://<배포주소>`)을 추가하세요. (서버 호출이라 필수는 아니지만, 누락 시 거부되는 사례가 있음)
-
-### 1-4. 함수 실행 시간
-API 라우트마다 `maxDuration = 60`(초)을 지정했습니다. 정규화 LLM 호출은 20건씩 청크로 나눠 병렬 호출하므로 보통 이 안에 끝납니다.
-
----
 
 ## 2. Docker 배포 (Cloud Run / Render / Railway / Fly.io)
 

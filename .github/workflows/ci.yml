@@ -1,0 +1,49 @@
+# Vercel 배포 전 자동 검증: 타입검사 → 회귀 테스트 → DB 마이그레이션 → 프로덕션 빌드 → 서버 기동/헬스체크.
+# 여기서 초록불이면 Vercel 빌드도 같은 단계를 통과한다 (Vercel은 vercel-build = migrate deploy + next build).
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: price_finder
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/price_finder
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/price_finder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Tests (명세 8장 함정 회귀)
+        run: npm test
+      - name: Migrate (Vercel 빌드와 동일)
+        run: npx prisma migrate deploy
+      - name: Build
+        run: npm run build
+      - name: Smoke test
+        run: |
+          npx next start -p 3000 &
+          for i in $(seq 1 30); do curl -sf localhost:3000/ >/dev/null && break; sleep 1; done
+          curl -sf localhost:3000/ >/dev/null
+          # 키 없이 실행하므로 ok=false(503)가 정상. DB·마이그레이션 항목만 확인한다.
+          curl -s localhost:3000/api/health | tee /tmp/health.json
+          grep -q '"db":"ok"' /tmp/health.json
+          grep -q '"migrations":"ok"' /tmp/health.json
