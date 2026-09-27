@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 라이트/다크 모두 직접 지원한다고 브라우저에 알린다.
+   (삼성 인터넷은 다크 테마가 없는 사이트를 강제로 반전시켜 색이 깨질 수 있다) */
+:root {
+  color-scheme: light dark;
+}
+
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
+  -webkit-tap-highlight-color: transparent;
 }

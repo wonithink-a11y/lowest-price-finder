@@ -11,20 +11,20 @@ export default function ResultsTabs({ kr, global }: { kr: Offer[]; global: Offer
 
   return (
     <div>
-      <div className="flex border-b border-gray-300">
+      <div className="flex border-b border-gray-300 dark:border-gray-700">
         <TabButton active={tab === "KR"} onClick={() => setTab("KR")} label={`국내 Top${kr.length}`} />
         <TabButton active={tab === "GLOBAL"} onClick={() => setTab("GLOBAL")} label={`해외직구 Top${global.length}`} />
       </div>
 
       {latestCollectedAt && (
-        <p className="mt-3 text-xs text-gray-400">
+        <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
           {new Date(latestCollectedAt).toLocaleString("ko-KR")} 기준 수집 · 실시간 가격이 아닙니다.
         </p>
       )}
 
       <div className="mt-2">
         {list.length === 0 ? (
-          <p className="py-10 text-center text-sm text-gray-400">
+          <p className="py-10 text-center text-sm text-gray-400 dark:text-gray-500">
             {tab === "KR" ? "국내" : "해외직구"} 조건을 만족하는 상품이 없습니다.
           </p>
         ) : (
@@ -39,8 +39,11 @@ function TabButton({ active, onClick, label }: { active: boolean; onClick: () =>
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium transition ${
-        active ? "border-b-2 border-teal-800 text-teal-800" : "text-gray-400 hover:text-gray-600"
+      // min-h-11(44px): 모바일 권장 최소 터치 영역
+      className={`min-h-11 px-4 py-2 text-sm font-medium transition ${
+        active
+          ? "border-b-2 border-teal-800 text-teal-800 dark:border-teal-400 dark:text-teal-400"
+          : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
       }`}
     >
       {label}

@@ -1,8 +1,12 @@
-const CACHE_NAME = "price-finder-shell-v2";
-const SHELL_ASSETS = ["/", "/manifest.json"];
+const CACHE_NAME = "price-finder-shell-v3";
+const SHELL_ASSETS = ["/", "/manifest.json", "/icons/icon-192.png"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ASSETS)));
+  // 하나라도 실패하면 설치 전체가 실패하는 cache.addAll 대신 개별 추가
+  // (비밀번호 설정 시 "/"는 로그인 전 리다이렉트되므로 실패할 수 있다)
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => Promise.all(SHELL_ASSETS.map((u) => cache.add(u).catch(() => {}))))
+  );
   self.skipWaiting();
 });
 
@@ -18,11 +22,13 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== "GET" || url.origin !== self.location.origin || url.pathname.startsWith("/api/")) return;
+  if (url.pathname === "/login") return;
 
   event.respondWith(
     fetch(event.request)
       .then((res) => {
-        if (res.ok) {
+        // 로그인 리다이렉트 등은 캐시하지 않는다
+        if (res.ok && !res.redirected && res.type === "basic") {
           const copy = res.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         }
