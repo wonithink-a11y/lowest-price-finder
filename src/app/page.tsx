@@ -5,12 +5,15 @@ import SearchBar from "@/components/SearchBar";
 import CandidateCards from "@/components/CandidateCards";
 import ResultsTabs from "@/components/ResultsTabs";
 import { CandidateCard, Offer, Reference } from "@/lib/types";
+import type { NormalizeStats } from "@/app/api/normalize/route";
+
+type Results = { kr: Offer[]; global: Offer[]; stats: NormalizeStats; warning: string | null };
 
 type Stage =
   | { step: "idle" }
   | { step: "loading"; label: string }
   | { step: "selecting"; query: string; candidates: CandidateCard[]; rawOfferIds: string[] }
-  | { step: "results"; kr: Offer[]; global: Offer[] }
+  | ({ step: "results" } & Results)
   | { step: "error"; message: string };
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
@@ -26,8 +29,12 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
   return res.json();
 }
 
-async function runNormalizeAndBuild(reference: Reference, rawOfferIds: string[]): Promise<{ kr: Offer[]; global: Offer[] }> {
-  const { normalizedIds } = await postJson<{ normalizedIds: string[] }>("/api/normalize", {
+async function runNormalizeAndBuild(reference: Reference, rawOfferIds: string[]): Promise<Results> {
+  const { normalizedIds, stats, warning } = await postJson<{
+    normalizedIds: string[];
+    stats: NormalizeStats;
+    warning: string | null;
+  }>("/api/normalize", {
     referenceId: reference.id,
     rawOfferIds,
   });
@@ -35,7 +42,7 @@ async function runNormalizeAndBuild(reference: Reference, rawOfferIds: string[])
     referenceId: reference.id,
     normalizedIds,
   });
-  return { kr: built.KR, global: built.GLOBAL };
+  return { kr: built.KR, global: built.GLOBAL, stats, warning };
 }
 
 export default function Home() {
@@ -51,8 +58,7 @@ export default function Home() {
 
       if (res.cached) {
         setStage({ step: "loading", label: "상품 정보 정규화 중..." });
-        const { kr, global } = await runNormalizeAndBuild(res.reference, res.rawOfferIds);
-        setStage({ step: "results", kr, global });
+        setStage({ step: "results", ...(await runNormalizeAndBuild(res.reference, res.rawOfferIds)) });
       } else {
         setStage({ step: "selecting", query, candidates: res.candidates, rawOfferIds: res.rawOfferIds });
       }
@@ -66,8 +72,7 @@ export default function Home() {
     try {
       const { reference } = await postJson<{ reference: Reference }>("/api/select", { query, chosen });
       setStage({ step: "loading", label: "상품 정보 정규화 중..." });
-      const { kr, global } = await runNormalizeAndBuild(reference, rawOfferIds);
-      setStage({ step: "results", kr, global });
+      setStage({ step: "results", ...(await runNormalizeAndBuild(reference, rawOfferIds)) });
     } catch (e) {
       setStage({ step: "error", message: e instanceof Error ? e.message : String(e) });
     }
@@ -90,7 +95,17 @@ export default function Home() {
           />
         )}
 
-        {stage.step === "results" && <ResultsTabs kr={stage.kr} global={stage.global} />}
+        {stage.step === "results" && (
+          <>
+            {stage.warning && (
+              <p className="mb-3 border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{stage.warning}</p>
+            )}
+            <ResultsTabs kr={stage.kr} global={stage.global} />
+            <p className="mt-4 text-xs text-gray-400">
+              분석: 규칙 {stage.stats.rules}건 · 재사용 {stage.stats.cached}건 · AI {stage.stats.llm}건
+            </p>
+          </>
+        )}
 
         {stage.step === "error" && (
           <p className="border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{stage.message}</p>

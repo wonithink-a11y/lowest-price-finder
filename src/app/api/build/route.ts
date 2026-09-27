@@ -40,7 +40,11 @@ export async function POST(req: Request) {
   const deduped = dedupeOffers(exposed);
   const partitioned = partitionAndRank(deduped);
 
+  // 캐시로 재사용된 normalized 행은 이전 build 결과가 남아 있다 (normalizedId unique) → 지우고 다시 쓴다.
+  const ids = normalizedRows.map((n) => n.id);
   await prisma.$transaction([
+    prisma.offerFinal.deleteMany({ where: { normalizedId: { in: ids } } }),
+    prisma.reviewQueue.deleteMany({ where: { normalizedId: { in: ids } } }),
     ...rejected.map((r) =>
       prisma.reviewQueue.create({ data: { normalizedId: r.normalizedId, reason: r.reason } })
     ),
