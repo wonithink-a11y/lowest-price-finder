@@ -3,6 +3,8 @@
 // DATABASE_URL: 런타임 쿼리용(풀러 가능), DIRECT_URL: 마이그레이션용 직결 URL.
 generator client {
   provider = "prisma-client-js"
+  // native: 로컬/CI, rhel-openssl-3.0.x: Vercel·AWS Lambda(Amazon Linux 2023), debian: Docker(node:20-slim)
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "debian-openssl-3.0.x"]
 }
 
 datasource db {
