@@ -63,13 +63,15 @@ export async function POST(req: Request) {
 
   let llmResults: Array<{ rawId: string; verdict: Verdict }> = [];
   let warning: string | null = null;
+  let warningDetail: string | null = null;
   if (forLlm.length > 0) {
     try {
       const verdicts = await normalizeOffers(reference, forLlm.map((r) => JSON.parse(r.payload) as RawOffer));
       llmResults = verdicts.map((v) => ({ rawId: forLlm[v.idx].id, verdict: v }));
     } catch (e) {
       // 규칙으로 처리한 결과는 살린다 (API 크레딧 소진 등에서도 부분 결과 제공)
-      warning = `AI 분석 실패로 ${forLlm.length}건이 제외되었습니다: ${e instanceof Error ? e.message : String(e)}`;
+      warning = `AI 분석 실패로 ${forLlm.length}건 제외`;
+      warningDetail = e instanceof Error ? e.message : String(e);
     }
   }
 
@@ -102,7 +104,7 @@ export async function POST(req: Request) {
 
   const normalizedIds = [...cachedByRaw.values(), ...created.map((c) => c.id)];
   if (normalizedIds.length === 0 && warning) {
-    return NextResponse.json({ error: warning, stats }, { status: 502 });
+    return NextResponse.json({ error: `${warning}: ${warningDetail}`, stats }, { status: 502 });
   }
-  return NextResponse.json({ normalizedIds, referenceId: reference.id, stats, warning });
+  return NextResponse.json({ normalizedIds, referenceId: reference.id, stats, warning, warningDetail });
 }

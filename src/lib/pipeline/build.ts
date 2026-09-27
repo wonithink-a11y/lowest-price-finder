@@ -155,7 +155,8 @@ export function buildAndScore(reference: Reference, items: BuildItem[]): BuildRe
         s.verdict.strength_value !== null && s.verdict.strength_unit !== null
           ? formatStrength(s.verdict.strength_value, s.verdict.strength_unit)
           : "확인 필요",
-      variant: `${s.verdict.units_per_pack ?? "?"}${s.verdict.pack_unit ?? ""} x ${s.verdict.pack_count ?? 1}`,
+      variant: formatVariant(s.verdict.units_per_pack, s.verdict.pack_unit, s.verdict.pack_count, s.totalUnits),
+      pack_unit: s.verdict.pack_unit,
       total_units: s.totalUnits,
       price: s.raw.price,
       shipping_fee: s.shippingFee,
@@ -174,6 +175,14 @@ export function buildAndScore(reference: Reference, items: BuildItem[]): BuildRe
   }
 
   return { exposed, rejected, normalizedIdOf };
+}
+
+// 표시용 구성: "30포 × 1", "30포 × 4 = 120포" (총수량은 코드가 재계산한 값)
+function formatVariant(upp: number | null, unit: string | null, count: number | null, total: number): string {
+  const u = unit ?? "";
+  const n = count ?? 1;
+  const base = `${upp ?? "?"}${u} × ${n}`;
+  return n > 1 ? `${base} = ${total}${u}` : base;
 }
 
 function normalizeStr(v: string | null): string {

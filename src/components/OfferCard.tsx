@@ -1,64 +1,37 @@
 import { Offer } from "@/lib/types";
+import { StatusIcons } from "./StatusIcons";
 
-const FLAG_STYLE: Record<string, string> = {
-  배송비추정: "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200",
-  이상치의심: "bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-200",
-  확인필요: "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200",
-};
+const won = (n: number) => Math.round(n).toLocaleString("ko-KR");
 
+// 판매처 한 줄 (두 줄 구성)
+//   1줄: 순위 · 판매처 · 상태 아이콘 ········ 개당 단가
+//   2줄:        구성 (30포 × 4 = 120포) ···· 총액
 export default function OfferCard({ offer, rank }: { offer: Offer; rank: number }) {
+  const top = rank === 1;
   return (
     <a
       href={offer.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex gap-3 border-b border-gray-200 py-4 transition hover:bg-gray-50 active:bg-gray-100 sm:gap-4 dark:border-gray-800 dark:hover:bg-gray-900 dark:active:bg-gray-800"
+      title={offer.title}
+      className="grid grid-cols-[22px_minmax(0,1fr)_auto] items-baseline gap-x-2.5 gap-y-0.5 border-t border-line px-[18px] py-3.5 transition first:border-t-0 hover:bg-surface-2 active:bg-surface-2"
     >
-      <div className="w-6 shrink-0 pt-1 text-center font-mono text-sm text-gray-400 sm:w-8 dark:text-gray-500">{rank}</div>
+      <span className={`text-sm font-bold tabular-nums ${top ? "text-accent" : "text-faint"}`}>{rank}</span>
 
-      {offer.image && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={offer.image} alt={offer.title} className="h-16 w-16 shrink-0 object-cover" />
-      )}
+      <span className="flex min-w-0 items-center gap-1">
+        <span className="truncate text-[15px] font-bold">{offer.mall}</span>
+        <StatusIcons offer={offer} />
+      </span>
 
-      {/* 모바일: 상품 정보 → 가격을 세로로 쌓는다 (좁은 화면에서 가격 열이 상품명을 잘라먹지 않도록).
-          sm 이상: 기존처럼 가격을 오른쪽 열에 둔다. */}
-      <div className="min-w-0 flex-1 sm:flex sm:gap-4">
-        <div className="min-w-0 sm:flex-1">
-          <div className="truncate text-sm text-gray-500 dark:text-gray-400">
-            {offer.mall} · {offer.brand}
-          </div>
-          <div className="line-clamp-2 break-keep font-medium">{offer.product_name}</div>
-          <div className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-            {offer.strength} · {offer.variant}
-          </div>
+      <span className={`whitespace-nowrap text-right text-lg font-bold tabular-nums ${top ? "text-price" : ""}`}>
+        {won(offer.unit_price)}원
+        <small className="ml-0.5 text-xs font-normal text-faint">/{offer.pack_unit ?? "개"}</small>
+      </span>
 
-          {offer.flags.length > 0 && (
-            <div className="mt-1 flex flex-wrap gap-1">
-              {offer.flags.map((f) => (
-                <span key={f} className={`px-1.5 py-0.5 text-xs ${FLAG_STYLE[f] ?? "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"}`}>
-                  {f}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {offer.customs_note && <div className="mt-1 break-keep text-xs text-gray-500 dark:text-gray-400">{offer.customs_note}</div>}
-        </div>
-
-        <div className="mt-2 flex items-end justify-between gap-2 font-mono sm:mt-0 sm:block sm:shrink-0 sm:text-right">
-          {/* whitespace-nowrap: 좁은 화면에서 "542 / 원"으로 줄바꿈되던 문제 방지 */}
-          <div className="whitespace-nowrap text-lg font-bold text-teal-800 dark:text-teal-400">
-            {Math.round(offer.unit_price).toLocaleString()}원<span className="text-xs text-gray-400 dark:text-gray-500">/개</span>
-          </div>
-          <div className="min-w-0 break-keep text-right text-xs text-gray-400 dark:text-gray-500">
-            <div>
-              참고가 {offer.price.toLocaleString()}원 + 배송 {offer.shipping_fee.toLocaleString()}원
-            </div>
-            <div>총 {offer.total_cost.toLocaleString()}원</div>
-          </div>
-        </div>
-      </div>
+      <span className="col-start-2 text-[13px] text-sub tabular-nums">{offer.variant}</span>
+      <span className="col-start-3 whitespace-nowrap text-right text-xs text-faint tabular-nums">
+        총 {won(offer.total_cost)}원
+      </span>
     </a>
   );
 }

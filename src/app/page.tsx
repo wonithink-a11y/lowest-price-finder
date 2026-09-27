@@ -7,7 +7,8 @@ import ResultsTabs from "@/components/ResultsTabs";
 import { CandidateCard, Offer, Reference } from "@/lib/types";
 import type { NormalizeStats } from "@/app/api/normalize/route";
 
-type Results = { kr: Offer[]; global: Offer[]; stats: NormalizeStats; warning: string | null };
+// stats(규칙/재사용/AI 처리 건수)는 화면에 표시하지 않지만 API 응답과 개발자 콘솔에는 남긴다.
+type Results = { kr: Offer[]; global: Offer[]; warning: string | null; referenceName: string };
 
 type Stage =
   | { step: "idle" }
@@ -41,26 +42,29 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
 }
 
 async function runNormalizeAndBuild(reference: Reference, rawOfferIds: string[]): Promise<Results> {
-  const { normalizedIds, stats, warning } = await postJson<{
+  const { normalizedIds, stats, warning, warningDetail } = await postJson<{
     normalizedIds: string[];
     stats: NormalizeStats;
     warning: string | null;
+    warningDetail: string | null;
   }>("/api/normalize", {
     referenceId: reference.id,
     rawOfferIds,
   });
+  console.info("[price-finder] 분석 건수", stats);
+  if (warningDetail) console.warn("[price-finder] AI 분석 실패 원인:", warningDetail);
   const built = await postJson<{ KR: Offer[]; GLOBAL: Offer[] }>("/api/build", {
     referenceId: reference.id,
     normalizedIds,
   });
-  return { kr: built.KR, global: built.GLOBAL, stats, warning };
+  return { kr: built.KR, global: built.GLOBAL, warning, referenceName: `${reference.brand} ${reference.product_name}` };
 }
 
 export default function Home() {
   const [stage, setStage] = useState<Stage>({ step: "idle" });
 
   const handleSearch = async (query: string) => {
-    setStage({ step: "loading", label: "판매처 수집 중..." });
+    setStage({ step: "loading", label: "가격 모으는 중..." });
     try {
       const res = await postJson<
         | { cached: true; reference: Reference; rawOfferIds: string[] }
@@ -68,7 +72,7 @@ export default function Home() {
       >("/api/search", { query });
 
       if (res.cached) {
-        setStage({ step: "loading", label: "상품 정보 정규화 중..." });
+        setStage({ step: "loading", label: "구성 분석 중..." });
         setStage({ step: "results", ...(await runNormalizeAndBuild(res.reference, res.rawOfferIds)) });
       } else {
         setStage({ step: "selecting", query, candidates: res.candidates, rawOfferIds: res.rawOfferIds });
@@ -79,10 +83,9 @@ export default function Home() {
   };
 
   const handleSelect = async (query: string, chosen: CandidateCard, rawOfferIds: string[]) => {
-    setStage({ step: "loading", label: "기준 상품 확정 중..." });
+    setStage({ step: "loading", label: "구성 분석 중..." });
     try {
       const { reference } = await postJson<{ reference: Reference }>("/api/select", { query, chosen });
-      setStage({ step: "loading", label: "상품 정보 정규화 중..." });
       setStage({ step: "results", ...(await runNormalizeAndBuild(reference, rawOfferIds)) });
     } catch (e) {
       setStage({ step: "error", message: e instanceof Error ? e.message : String(e) });
@@ -91,14 +94,18 @@ export default function Home() {
 
   return (
     // safe-area: 앱으로 설치해 전체 화면으로 열 때 노치·펀치홀·제스처 바에 내용이 가리지 않도록
-    <main className="mx-auto max-w-2xl pb-[max(2.5rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(2.5rem,env(safe-area-inset-top))]">
-      <h1 className="mb-1 text-2xl font-bold">최저가 비교</h1>
-      <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">단가(총비용 ÷ 총수량) 기준. 표기가가 아닙니다.</p>
+    <div className="mx-auto max-w-xl pb-[max(2.5rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
+      <header className="sticky top-0 z-10 bg-bg pb-2.5 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <h1 className="sr-only">최저가 비교</h1>
+        <SearchBar onSearch={handleSearch} disabled={stage.step === "loading"} />
+      </header>
 
-      <SearchBar onSearch={handleSearch} disabled={stage.step === "loading"} />
+      <main className="mt-3 flex flex-col gap-3" aria-live="polite">
+        {stage.step === "idle" && (
+          <p className="px-1 text-sm text-sub">상품명을 검색하면 판매처별 개당 단가를 비교합니다.</p>
+        )}
 
-      <div className="mt-8">
-        {stage.step === "loading" && <p className="animate-pulse text-sm text-gray-400 dark:text-gray-500">{stage.label}</p>}
+        {stage.step === "loading" && <Loading label={stage.label} />}
 
         {stage.step === "selecting" && (
           <CandidateCards
@@ -110,19 +117,28 @@ export default function Home() {
         {stage.step === "results" && (
           <>
             {stage.warning && (
-              <p className="mb-3 break-keep border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{stage.warning}</p>
+              <p className="rounded-xl bg-warn-soft px-3.5 py-3 text-sm text-warn">{stage.warning}</p>
             )}
-            <ResultsTabs kr={stage.kr} global={stage.global} />
-            <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
-              분석: 규칙 {stage.stats.rules}건 · 재사용 {stage.stats.cached}건 · AI {stage.stats.llm}건
-            </p>
+            <ResultsTabs kr={stage.kr} global={stage.global} referenceName={stage.referenceName} />
           </>
         )}
 
         {stage.step === "error" && (
-          <p className="break-keep border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200">{stage.message}</p>
+          <p className="rounded-xl bg-danger-soft px-3.5 py-3 text-sm text-danger">{stage.message}</p>
         )}
-      </div>
-    </main>
+      </main>
+    </div>
+  );
+}
+
+function Loading({ label }: { label: string }) {
+  const bar = "animate-pulse rounded-md bg-chip motion-reduce:animate-none";
+  return (
+    <section aria-busy="true" className="flex flex-col gap-2.5 rounded-2xl bg-surface p-[18px] shadow-card">
+      <p className="text-[13px] text-sub">{label}</p>
+      <div className={`h-3.5 w-2/5 ${bar}`} />
+      <div className={`h-7 w-[45%] ${bar}`} />
+      <div className={`h-3.5 w-4/5 ${bar}`} />
+    </section>
   );
 }

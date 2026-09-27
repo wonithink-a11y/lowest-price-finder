@@ -3,50 +3,67 @@
 import { useState } from "react";
 import { Offer } from "@/lib/types";
 import OfferCard from "./OfferCard";
+import { StatusLegend } from "./StatusIcons";
 
-export default function ResultsTabs({ kr, global }: { kr: Offer[]; global: Offer[] }) {
+export default function ResultsTabs({
+  kr,
+  global,
+  referenceName,
+}: {
+  kr: Offer[];
+  global: Offer[];
+  referenceName: string;
+}) {
   const [tab, setTab] = useState<"KR" | "GLOBAL">("KR");
   const list = tab === "KR" ? kr : global;
-  const latestCollectedAt = list.length > 0 ? list[0].collected_at : null;
+  // 명세 8장 4: 수집 시각 필수 노출 (실시간 가격이 아님)
+  const collectedAt = (list[0] ?? kr[0] ?? global[0])?.collected_at;
 
   return (
-    <div>
-      <div className="flex border-b border-gray-300 dark:border-gray-700">
-        <TabButton active={tab === "KR"} onClick={() => setTab("KR")} label={`국내 Top${kr.length}`} />
-        <TabButton active={tab === "GLOBAL"} onClick={() => setTab("GLOBAL")} label={`해외직구 Top${global.length}`} />
+    <>
+      <div role="tablist" aria-label="판매 지역" className="grid grid-cols-2 gap-1 rounded-xl bg-chip p-1">
+        <Segment active={tab === "KR"} onClick={() => setTab("KR")} label="국내" count={kr.length} />
+        <Segment active={tab === "GLOBAL"} onClick={() => setTab("GLOBAL")} label="해외직구" count={global.length} />
       </div>
 
-      {latestCollectedAt && (
-        <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
-          {new Date(latestCollectedAt).toLocaleString("ko-KR")} 기준 수집 · 실시간 가격이 아닙니다.
-        </p>
-      )}
+      <div className="flex items-baseline justify-between gap-2 px-1 text-xs text-faint">
+        <span className="min-w-0 truncate text-[13px] font-medium text-sub">{referenceName}</span>
+        <span className="shrink-0">단가 낮은 순</span>
+      </div>
 
-      <div className="mt-2">
+      <div className="overflow-hidden rounded-2xl bg-surface shadow-card">
         {list.length === 0 ? (
-          <p className="py-10 text-center text-sm text-gray-400 dark:text-gray-500">
-            {tab === "KR" ? "국내" : "해외직구"} 조건을 만족하는 상품이 없습니다.
-          </p>
+          <p className="px-[18px] py-8 text-center text-sm text-faint">조건에 맞는 상품이 없습니다.</p>
         ) : (
           list.map((offer, i) => <OfferCard key={`${offer.source}-${offer.url}`} offer={offer} rank={i + 1} />)
         )}
       </div>
-    </div>
+
+      <StatusLegend offers={list} />
+
+      {collectedAt && (
+        <p className="px-1 text-center text-xs text-faint">
+          {new Date(collectedAt).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" })}{" "}
+          수집 · 참고가 기준
+        </p>
+      )}
+    </>
   );
 }
 
-function TabButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+function Segment({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number }) {
   return (
     <button
+      type="button"
+      role="tab"
+      aria-selected={active}
       onClick={onClick}
-      // min-h-11(44px): 모바일 권장 최소 터치 영역
-      className={`min-h-11 px-4 py-2 text-sm font-medium transition ${
-        active
-          ? "border-b-2 border-teal-800 text-teal-800 dark:border-teal-400 dark:text-teal-400"
-          : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+      className={`min-h-11 rounded-[9px] transition ${
+        active ? "bg-surface font-bold text-ink shadow-card" : "font-medium text-sub"
       }`}
     >
       {label}
+      <small className="ml-1 font-medium text-faint tabular-nums">{count}</small>
     </button>
   );
 }

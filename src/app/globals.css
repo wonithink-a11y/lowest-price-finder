@@ -2,13 +2,63 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 라이트/다크 모두 직접 지원한다고 브라우저에 알린다.
-   (삼성 인터넷은 다크 테마가 없는 사이트를 강제로 반전시켜 색이 깨질 수 있다) */
+/* 디자인 토큰. 라이트/다크를 직접 제공한다
+   (삼성 인터넷은 다크 테마가 없는 사이트를 강제로 반전시켜 색이 깨질 수 있다). */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
+  --bg: #f2f4f6;
+  --surface: #ffffff;
+  --surface-2: #f7f8fa;
+  --ink: #191f28;
+  --sub: #4e5968;
+  --faint: #8b95a1;
+  --line: #e5e8eb;
+  --chip: #eef0f3;
+  --accent: #1b64da;
+  --accent-soft: #e8f0fd;
+  --on-accent: #ffffff;
+  --price: #e5323f;
+  --good: #0a7d52;
+  --good-soft: #e3f6ee;
+  --warn: #9a5200;
+  --warn-soft: #fff1dc;
+  --danger: #c01f2e;
+  --danger-soft: #ffe9ec;
+  --shadow: 0 1px 2px rgba(25, 31, 40, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #101113;
+    --surface: #1b1d21;
+    --surface-2: #22252a;
+    --ink: #f2f4f6;
+    --sub: #b0b8c1;
+    --faint: #7d858f;
+    --line: #2c2f35;
+    --chip: #2a2d33;
+    --accent: #5b9bff;
+    --accent-soft: #1a2a45;
+    --on-accent: #0b1220;
+    --price: #ff6b78;
+    --good: #43d196;
+    --good-soft: #12301f;
+    --warn: #ffc27a;
+    --warn-soft: #3a2a12;
+    --danger: #ff8f99;
+    --danger-soft: #3b1519;
+    --shadow: none;
+  }
 }
 
 body {
-  @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
+  @apply bg-bg font-sans text-[15px] text-ink;
+  word-break: keep-all;
   -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

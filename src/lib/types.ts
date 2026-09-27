@@ -94,7 +94,9 @@ export interface Offer {
   brand: string;
   product_name: string;
   strength: string;
-  variant: string;
+  variant: string; // 표시용 구성, 예: "30포 × 4 = 120포"
+  // ⚠️ 명세 4.5 원문에 없는 필드. 단가를 "542원/포"처럼 실제 단위로 표시하기 위해 추가.
+  pack_unit: string | null;
   total_units: number;
   price: number;
   shipping_fee: number;

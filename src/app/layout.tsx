@@ -23,14 +23,21 @@ export const viewport: Viewport = {
   // 노치·펀치홀·제스처 바 영역까지 화면을 쓰고, 여백은 safe-area로 직접 준다 (page.tsx)
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f9fafb" },
-    { media: "(prefers-color-scheme: dark)", color: "#030712" },
+    { media: "(prefers-color-scheme: light)", color: "#f2f4f6" },
+    { media: "(prefers-color-scheme: dark)", color: "#101113" },
   ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
+      <head>
+        {/* 한글 글꼴. 빌드 시 다운로드가 필요 없는 <link> 방식 (로드 실패 시 시스템 글꼴로 대체) */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" />
+      </head>
       <body>
         <RegisterSW />
         {children}

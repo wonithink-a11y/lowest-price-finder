@@ -31,9 +31,9 @@ export default function LoginPage() {
 
   return (
     <main className="mx-auto max-w-sm pb-[max(2.5rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(4rem,env(safe-area-inset-top))]">
-      <h1 className="mb-1 text-2xl font-bold">최저가 비교</h1>
-      <p className="mb-8 text-sm text-gray-500 dark:text-gray-400">비밀번호를 입력하세요. 이 기기에서는 180일 동안 유지됩니다.</p>
-      <form onSubmit={submit} className="flex flex-col gap-3">
+      <form onSubmit={submit} className="flex flex-col gap-3 rounded-2xl bg-surface p-5 shadow-card">
+        <h1 className="text-lg font-bold">최저가 비교</h1>
+        <p className="-mt-1 text-sm text-sub">비밀번호를 입력하세요. 이 기기에서는 180일 동안 유지됩니다.</p>
         <input
           type="password"
           autoComplete="current-password"
@@ -42,16 +42,16 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="비밀번호"
           autoFocus
-          className="min-w-0 appearance-none rounded-none border-b-2 border-gray-900 bg-transparent px-1 py-3 text-lg outline-none placeholder:text-gray-400 dark:border-gray-200 dark:placeholder:text-gray-500"
+          className="min-w-0 appearance-none rounded-xl border border-line bg-surface-2 px-3.5 py-3 text-base outline-none placeholder:text-faint focus:border-accent focus-visible:outline-none"
         />
         <button
           type="submit"
           disabled={busy || !password}
-          className="min-h-11 bg-teal-800 px-5 py-3 font-medium text-white transition hover:bg-teal-900 disabled:bg-gray-300 dark:bg-teal-700 dark:hover:bg-teal-600 dark:disabled:bg-gray-700 dark:disabled:text-gray-400"
+          className="min-h-12 rounded-xl bg-accent px-5 font-bold text-on-accent transition disabled:opacity-50"
         >
           {busy ? "확인 중..." : "들어가기"}
         </button>
-        {error && <p className="text-sm text-rose-700 dark:text-rose-300">{error}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
       </form>
     </main>
   );
