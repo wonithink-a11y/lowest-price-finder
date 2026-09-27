@@ -1,0 +1,39 @@
+# CJ더마켓 기준가 크롤러 (명세서 7장: 1일 1~2회).
+# 필요 설정 (GitHub repo → Settings → Secrets and variables → Actions):
+#   secrets.DATABASE_URL    : 앱과 같은 Postgres (직결 URL 권장)
+#   vars.CJ_CRAWL_ENABLED   : "true" 로 설정해야 스케줄 실행됨 (셀렉터 확정 전엔 꺼둘 것)
+#   vars.CJ_QUERIES         : 크롤링할 검색어, 줄바꿈 구분
+name: crawl-cj-themarket
+
+on:
+  schedule:
+    - cron: "17 0,12 * * *" # UTC 00:17, 12:17 (KST 09:17, 21:17)
+  workflow_dispatch:
+    inputs:
+      queries:
+        description: "검색어 (줄바꿈 구분). 비우면 vars.CJ_QUERIES 사용"
+        required: false
+
+jobs:
+  crawl:
+    if: github.event_name == 'workflow_dispatch' || vars.CJ_CRAWL_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Crawl
+        env:
+          QUERIES: ${{ github.event.inputs.queries || vars.CJ_QUERIES }}
+        run: |
+          mapfile -t Q < <(printf '%s\n' "$QUERIES" | sed '/^\s*$/d')
+          if [ ${#Q[@]} -eq 0 ]; then echo "검색어 없음 (vars.CJ_QUERIES 설정 필요)"; exit 1; fi
+          npm run crawl:cj -- "${Q[@]}"

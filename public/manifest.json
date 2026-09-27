@@ -1,0 +1,13 @@
+{
+  "name": "최저가 비교",
+  "short_name": "최저가비교",
+  "description": "국내 Top5 / 해외직구 Top5 단가 기준 최저가 비교",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#111827",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
