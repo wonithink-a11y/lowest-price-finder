@@ -1,6 +1,6 @@
 # 최저가 비교 (Price Finder)
 
-`docs/price-finder-spec.md` 명세서 기반 구현. 검색 → 후보 그룹핑(LLM) → 사용자 선택 → 정규화(**규칙 우선, 애매한 건만 LLM**) → 계산/스코어링(코드) → 국내·해외 Top5.
+`docs/price-finder-spec.md` 명세서 기반 구현. 현재 상태·결정 사항·남은 일은 **[`docs/HANDOVER.md`](docs/HANDOVER.md)** (인수인계 문서) 참고. 검색 → 후보 그룹핑(LLM) → 사용자 선택 → 정규화(**규칙 우선, 애매한 건만 LLM**) → 계산/스코어링(코드) → 국내·해외 Top5.
 
 정규화는 `src/lib/pipeline/ruleExtract.ts`가 먼저 처리하고, 확실하지 않은 건(증정·옵션·다른 라인업·함량/수량 불명확·해외 여부 애매)만 LLM에 넘깁니다. 같은 Reference로 판정한 결과는 3시간 동안 재사용합니다. 규칙을 바꾸면 `RULES_VERSION`을 올려 캐시를 무효화하고 LLM 결과와 비교할 수 있습니다.
 
